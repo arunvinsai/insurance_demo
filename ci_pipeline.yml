@@ -1,0 +1,49 @@
+trigger:
+  branches:
+    include:
+      - 'master'
+  
+name: 'ci_pipeline'
+jobs:
+- job: 'ci_pipeline_job'
+  pool:
+    vmImage: 'ubuntu-latest'
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.7'
+      architecture: 'x64'
+
+  - task: ShellScript@2
+    displayName: 'Install testing dependencies'
+    script: |
+      python -m pip install --upgrade pip
+      pip install pytest mock codecov pydocstyle pytest-cov pylint pylint_junit
+    
+  
+  - task: ShellScript@2
+    displayName: 'Install project requirements'
+    bash: package_requirement/install_requirements.sh 
+
+  - task: ShellScript@2
+    displayName: 'Run all unit tests'
+    script: |
+      pytest training/train_test.py --doctest-modules --junitxml=unit-testresults.xml --cov=data_test --cov-append --cov-report=xml:coverage.xml --cov-report=html:htmlcov
+  
+  - task: PublishTestResults@2
+    displayName: 'Publish unit test results'
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/*-testresults.xml'
+      testRunTitle: '$(Agent.OS) - $(Build.BuildNumber)[$(Agent.JobName)] - Python $(python.version) - Linting and Unit Test results'
+    condition: succeededOrFailed()
+    
+  
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: 'coverage.xml'
+      reportDirectory: 'htmlcov'
+    displayName: 'Publish Coverage Results'
+  

@@ -109,6 +109,4 @@ config.json
 *.pkl
 /.vscode
 
-*.yml
-*.yaml
 
